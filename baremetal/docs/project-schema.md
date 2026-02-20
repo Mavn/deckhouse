@@ -18,18 +18,18 @@
 flowchart TB
 
   subgraph NG[Deckhouse NodeGroups]
-    NGW[worker\nlabelSelector: role=worker\ncount:1]
-    NGS[system\nlabelSelector: role=system\ncount:1\nlabel: node-role.deckhouse.io/system\ntaint: dedicated.deckhouse.io=system:NoExecute]
-    NGF[front\nlabelSelector: role=front\ncount:2\nlabel: node-role.deckhouse.io/front\ntaint: dedicated.deckhouse.io=front:NoExecute]
-    NGLB[frontlb\nlabelSelector: role=frontlb\ncount:1\nlabel: node-role.deckhouse.io/frontlb\ntaint: dedicated.deckhouse.io=frontlb:NoExecute]
+    NGW[worker<br/>labelSelector: role=worker<br/>count:1]
+    NGS[system<br/>labelSelector: role=system<br/>count:1<br/>label: node-role.deckhouse.io/system<br/>taint: dedicated.deckhouse.io=system:NoExecute]
+    NGF[front<br/>labelSelector: role=front<br/>count:2<br/>label: node-role.deckhouse.io/front<br/>taint: dedicated.deckhouse.io=front:NoExecute]
+    NGLB[frontlb<br/>labelSelector: role=frontlb<br/>count:1<br/>label: node-role.deckhouse.io/frontlb<br/>taint: dedicated.deckhouse.io=frontlb:NoExecute]
   end
 
   subgraph Nodes[Static instances]
-    N1[tdh-worker-01\n192.168.142.95]
-    N2[tdh-system-01\n192.168.142.92]
-    N3[tdh-front-01\n192.168.142.93]
-    N4[tdh-front-02\n192.168.142.94]
-    N5[tdh-front-lb-01\n192.168.142.96]
+    N1[tdh-worker-01<br/>192.168.142.95]
+    N2[tdh-system-01<br/>192.168.142.92]
+    N3[tdh-front-01<br/>192.168.142.93]
+    N4[tdh-front-02<br/>192.168.142.94]
+    N5[tdh-front-lb-01<br/>192.168.142.96]
   end
 
   NGW --> N1
@@ -38,11 +38,11 @@ flowchart TB
   NGF --> N4
   NGLB --> N5
 
-  IC[IngressNginxController: main\ningressClass: nginx\nnodeSelector: node-role.deckhouse.io/frontlb\ntoleration: dedicated.deckhouse.io=frontlb] --> NGLB
+  IC[IngressNginxController: main<br/>ingressClass: nginx<br/>nodeSelector: node-role.deckhouse.io/frontlb<br/>toleration: dedicated.deckhouse.io=frontlb] --> NGLB
 
-  FD[Frontend Deployment\nnodeSelector: node-role.deckhouse.io/front\ntoleration: dedicated.deckhouse.io=front\naffinity + topologySpread] --> NGF
-  FS[Service: frontend\nClusterIP :80/:443] --> FD
-  FI[Ingress: frontend\nclass nginx\nhost frontend.local] --> FS
+  FD[Frontend Deployment<br/>nodeSelector: node-role.deckhouse.io/front<br/>toleration: dedicated.deckhouse.io=front<br/>affinity + topologySpread] --> NGF
+  FS[Service: frontend<br/>ClusterIP :80/:443] --> FD
+  FI[Ingress: frontend<br/>class nginx<br/>host frontend.local] --> FS
 ```
 
 ## Topology diagram (Mermaid, LR)
@@ -50,16 +50,16 @@ flowchart TB
 ```mermaid
 flowchart LR
 
-  NGW[NG worker\nrole=worker\ncount=1] --> N1[tdh-worker-01]
-  NGS[NG system\nrole=system\ncount=1] --> N2[tdh-system-01]
-  NGF[NG front\nrole=front\ncount=2] --> N3[tdh-front-01]
+  NGW[NG worker<br/>role=worker<br/>count=1] --> N1[tdh-worker-01]
+  NGS[NG system<br/>role=system<br/>count=1] --> N2[tdh-system-01]
+  NGF[NG front<br/>role=front<br/>count=2] --> N3[tdh-front-01]
   NGF --> N4[tdh-front-02]
-  NGLB[NG frontlb\nrole=frontlb\ncount=1] --> N5[tdh-front-lb-01]
+  NGLB[NG frontlb<br/>role=frontlb<br/>count=1] --> N5[tdh-front-lb-01]
 
-  IC[IngressNginxController main\nclass=nginx] --> NGLB
-  DEP[Deployment frontend\nreplicas=2] --> NGF
-  SVC[Service frontend\nClusterIP:80/443] --> DEP
-  ING[Ingress frontend\nhost=frontend.local] --> SVC
+  IC[IngressNginxController main<br/>class=nginx] --> NGLB
+  DEP[Deployment frontend<br/>replicas=2] --> NGF
+  SVC[Service frontend<br/>ClusterIP:80/443] --> DEP
+  ING[Ingress frontend<br/>host=frontend.local] --> SVC
 ```
 
 ## NodeGroup to Node mapping
