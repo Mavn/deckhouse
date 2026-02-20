@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: StaticInstance
+metadata:
+  name: tdh-monitoring-01
+  labels:
+    role: monitoring
+spec:
+  address: "192.168.142.98"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps

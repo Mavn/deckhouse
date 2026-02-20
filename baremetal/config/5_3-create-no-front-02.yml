@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: StaticInstance
+metadata:
+  name: tdh-front-02
+  labels:
+    role: front
+spec:
+  address: "192.168.142.94"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps

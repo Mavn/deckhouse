@@ -1,0 +1,806 @@
+---
+# Настройки облачного провайдера Yandex Cloud
+# https://deckhouse.io/modules/cloud-provider-yandex/cluster_configuration.html
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+provider:
+  cloudID: "YOUR_CLOUD_ID"  # Замените на ваш Cloud ID
+  folderID: "YOUR_FOLDER_ID"  # Замените на ваш Folder ID
+  # JSON ключ сгенерированный: yc iam key create --service-account-id=<SA_ID> --format=json
+  serviceAccountJSON: |
+    {
+      "id": "YOUR_KEY_ID",
+      "service_account_id": "YOUR_SA_ID",
+      "created_at": "2024-01-01T00:00:00Z",
+      "key_algorithm": "RSA_2048",
+      "public_key": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----\n",
+      "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+    }
+---
+# https://deckhouse.ru/modules/cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: load-balancer
+spec:
+  cores: 2
+  memory: 4096
+  diskSizeGB: 20
+---
+# Load Balancer NodeGroup
+# https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: load-balancer
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: load-balancer
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+    - ru-central1-b
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# Master Nodes Instance Class (2 pcs standart)
+# https://deckhouse.ru/modules/cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: master
+spec:
+  cores: 4
+  memory: 8192
+  diskSizeGB: 50
+---
+# Master NodeGroup
+# https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: master
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+    - ru-central1-b
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# System Node Instance Class (1 pc standart)
+# https://deckhouse.ru/modules/cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: system
+spec:
+  cores: 4
+  memory: 8192
+  diskSizeGB: 50
+---
+# System NodeGroup
+# https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: system
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+  nodeSelector:
+    node.deckhouse.io/group: system
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# Frontend Nodes Instance Class (2 nodes: 4 CPU 8G RAM HDD 30GB)
+# https://deckhouse.ru/modules/cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: frontend
+spec:
+  cores: 4
+  memory: 8192
+  diskSizeGB: 30
+---
+# Frontend NodeGroup
+# https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: frontend
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: frontend
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+    - ru-central1-b
+  nodeSelector:
+    node.deckhouse.io/group: frontend
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# Worker Nodes Instance Class (3 nodes: 8 CPU 8G RAM HDD 30GB)
+# https://deckhouse.ru/modules/cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: worker
+spec:
+  cores: 8
+  memory: 8192
+  diskSizeGB: 30
+  backup:
+    enabled: true
+    s3:
+      bucketName: "deckhouse-backup"
+      mode: External
+      external:
+        provider: YCloud
+        accessKey: "csi-s3-secret"        # Ссылка на Secret для accessKeyID
+        secretKey: "csi-s3-secret"        # Ссылка на Secret для secretAccessKey
+---
+# Worker NodeGroup
+# https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: worker
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+    - ru-central1-b
+    - ru-central1-c
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# Monitoring Node Instance Class (3 nodes, 8CPU 8G RAM, HDD1 30GB, HDD2 100GB)
+# https://deckhouse.ru/modules/cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: monitoring
+spec:
+  cores: 8
+  memory: 8192
+  diskSizeGB: 30
+  secondaryDisks:
+  - sizeGb: 100
+    type: network-hdd
+---
+# Monitoring NodeGroup
+# https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: monitoring
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: monitoring
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+    - ru-central1-b
+    - ru-central1-c
+  nodeSelector:
+    node.deckhouse.io/group: monitoring
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# NFS Server Instance Class (8CPU 8GB RAM, HDD1 40GB, HDD2 300GB)
+# https://deckhouse.ru/modules/cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: nfs-server
+spec:
+  cores: 8
+  memory: 8192
+  diskSizeGB: 40
+  secondaryDisks:
+  - sizeGb: 300
+    type: network-hdd
+  backup:
+    enabled: true
+    s3:
+      bucketName: "deckhouse-backup"
+      mode: External
+      external:
+        provider: YCloud
+        accessKey: "csi-s3-secret"        # Ссылка на Secret для accessKeyID
+        secretKey: "csi-s3-secret"        # Ссылка на Secret для secretAccessKey
+---
+# NFS Server NodeGroup
+# https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: nfs-server
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: nfs-server
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+  nodeSelector:
+    node.deckhouse.io/group: nfs-server
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# Ingress NGINX Controller
+# https://deckhouse.ru/modules/ingress-nginx/cr.html
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  nodeSelector:
+    node.deckhouse.io/group: load-balancer
+---
+# ConfigMap с скриптом инициализации NFS Server RPC TLS
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nfs-server-init-script
+  namespace: kube-system
+data:
+  setup-nfs-rpc-tls.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Установка NFS Server с TLS поддержкой
+    apt-get update
+    apt-get install -y nfs-kernel-server nfs-common rpcbind openssl ktls-utils xfsprogs
+    
+    # Создание директории для дополнительного диска
+    mkdir -p /mnt/nfs-storage
+    
+    # Автоматический поиск дополнительного диска
+    # Проверяем /dev/vdb, /dev/sdb, /dev/xvdb, /dev/nvme1n1 и другие
+    SECONDARY_DISK=""
+    for disk in /dev/vdb /dev/sdb /dev/xvdb /dev/nvme1n1; do
+      if [ -b "$disk" ]; then
+        # Проверяем, что диск не смонтирован
+        if ! mount | grep -q "$disk"; then
+          SECONDARY_DISK="$disk"
+          break
+        fi
+      fi
+    done
+    
+    # Монтирование найденного диска
+    if [ -n "$SECONDARY_DISK" ]; then
+      echo "Found secondary disk: $SECONDARY_DISK"
+      mkfs.xfs -f "$SECONDARY_DISK" || true
+      mount "$SECONDARY_DISK" /mnt/nfs-storage || true
+      echo "$SECONDARY_DISK /mnt/nfs-storage xfs defaults 0 0" >> /etc/fstab
+    else
+      echo "Warning: Secondary disk not found, using local storage"
+    fi
+    
+    # Создание экспортируемой директории
+    mkdir -p /mnt/nfs-storage/exports
+    chmod 777 /mnt/nfs-storage/exports
+    
+    # Конфигурация NFS экспорта
+    cat > /etc/exports << 'EOF'
+    /mnt/nfs-storage/exports 10.111.0.0/16(rw,sync,no_subtree_check,no_root_squash)
+    EOF
+    
+    # Настройка TLS для NFS RPC (Ubuntu 24.04)
+    TLS_DIR="/etc/rpc.tls"
+    mkdir -p "$TLS_DIR"
+
+    # Самоподписанный сертификат (замените на свой при необходимости)
+    if [ ! -f "$TLS_DIR/nfs-server.key" ]; then
+      openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout "$TLS_DIR/nfs-server.key" \
+        -out "$TLS_DIR/nfs-server.crt" \
+        -days 3650 \
+        -subj "/CN=nfs-server"
+      cp "$TLS_DIR/nfs-server.crt" "$TLS_DIR/ca.crt"
+      chmod 600 "$TLS_DIR/nfs-server.key"
+      chmod 644 "$TLS_DIR/nfs-server.crt" "$TLS_DIR/ca.crt"
+    fi
+
+    # Включение TLS для RPC
+    echo "RPCNFSDOPTS=\"--tls\"" >> /etc/default/nfs-kernel-server
+    
+    # Перезагрузка NFS
+    exportfs -a
+    systemctl restart rpcbind
+    systemctl enable rpcbind
+    systemctl restart tlshd
+    systemctl enable tlshd
+    systemctl restart rpc-tlsd
+    systemctl enable rpc-tlsd
+    systemctl restart nfs-kernel-server
+    systemctl enable nfs-kernel-server
+    
+    echo "NFS Server initialized successfully"
+---
+# DaemonSet для инициализации NFS сервера на nfs-server узлах
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nfs-server-setup
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: nfs-server-setup
+  template:
+    metadata:
+      labels:
+        app: nfs-server-setup
+    spec:
+      nodeSelector:
+        node.deckhouse.io/group: nfs-server
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+      - name: nfs-setup
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          apk add --no-cache bash
+          # Скрипт уже запустится на ноде автоматически при boot
+          echo "NFS Server node is ready"
+        securityContext:
+          privileged: true
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+---
+# Secret для TLS (создается Job-ом ниже)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: csi-nfs-tls
+  namespace: kube-system
+type: Opaque
+stringData:
+  ca.crt: "WILL_BE_SET_AUTOMATICALLY"
+  nfs-server.crt: "WILL_BE_SET_AUTOMATICALLY"
+  nfs-server.key: "WILL_BE_SET_AUTOMATICALLY"
+---
+# DaemonSet для синхронизации TLS сертификатов на NFS сервер
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nfs-server-tls-sync
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: nfs-server-tls-sync
+  template:
+    metadata:
+      labels:
+        app: nfs-server-tls-sync
+    spec:
+      nodeSelector:
+        node.deckhouse.io/group: nfs-server
+      containers:
+      - name: tls-sync
+        image: alpine:3.19
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          set -e
+          mkdir -p /host/etc/rpc.tls
+          cp /tls/ca.crt /host/etc/rpc.tls/ca.crt
+          cp /tls/nfs-server.crt /host/etc/rpc.tls/nfs-server.crt
+          cp /tls/nfs-server.key /host/etc/rpc.tls/nfs-server.key
+          chmod 644 /host/etc/rpc.tls/ca.crt /host/etc/rpc.tls/nfs-server.crt
+          chmod 600 /host/etc/rpc.tls/nfs-server.key
+          echo "TLS certs synced to /etc/rpc.tls"
+          sleep 3600
+        volumeMounts:
+        - name: tls
+          mountPath: /tls
+        - name: host-etc
+          mountPath: /host/etc
+      volumes:
+      - name: tls
+        secret:
+          secretName: csi-nfs-tls
+      - name: host-etc
+        hostPath:
+          path: /etc
+      restartPolicy: Always
+---
+# ServiceAccount для Job генерации TLS
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-nfs-tls-bootstrap
+  namespace: kube-system
+---
+# ClusterRole для Job генерации TLS
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csi-nfs-tls-bootstrap
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create", "get", "patch", "update"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["moduleconfigs"]
+  verbs: ["get", "patch", "update"]
+---
+# ClusterRoleBinding для Job генерации TLS
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: csi-nfs-tls-bootstrap
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: csi-nfs-tls-bootstrap
+subjects:
+- kind: ServiceAccount
+  name: csi-nfs-tls-bootstrap
+  namespace: kube-system
+---
+# Job для генерации TLS сертификатов и настройки ModuleConfig csi-nfs
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: csi-nfs-tls-bootstrap
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      serviceAccountName: csi-nfs-tls-bootstrap
+      containers:
+      - name: tls-bootstrap
+        image: ubuntu:24.04
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          set -e
+          # Внутри Job-контейнера нет d8 CLI, поэтому для API-вызовов используется kubectl.
+          # Это runtime-скрипт bootstrap, не пользовательская CLI-практика.
+          apt-get update
+          apt-get install -y openssl curl ca-certificates
+          curl -L -o /usr/local/bin/kubectl https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
+          chmod +x /usr/local/bin/kubectl
+
+          TLS_DIR=/tmp/rpc-tls
+          mkdir -p "$TLS_DIR"
+
+          # CA
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout "$TLS_DIR/ca.key" \
+            -out "$TLS_DIR/ca.crt" \
+            -days 3650 \
+            -subj "/CN=nfs-ca"
+
+          # Server cert
+          openssl req -newkey rsa:2048 -nodes \
+            -keyout "$TLS_DIR/nfs-server.key" \
+            -out "$TLS_DIR/nfs-server.csr" \
+            -subj "/CN=nfs-server"
+
+          openssl x509 -req -in "$TLS_DIR/nfs-server.csr" \
+            -CA "$TLS_DIR/ca.crt" \
+            -CAkey "$TLS_DIR/ca.key" \
+            -CAcreateserial \
+            -out "$TLS_DIR/nfs-server.crt" \
+            -days 3650
+
+          kubectl -n kube-system create secret generic csi-nfs-tls \
+            --from-file=ca.crt="$TLS_DIR/ca.crt" \
+            --from-file=nfs-server.crt="$TLS_DIR/nfs-server.crt" \
+            --from-file=nfs-server.key="$TLS_DIR/nfs-server.key" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          CA_B64=$(base64 -w 0 "$TLS_DIR/ca.crt")
+          kubectl patch moduleconfig csi-nfs --type merge -p \
+            '{"spec":{"settings":{"tlsParameters":{"ca":"'$CA_B64'"}}}}'
+
+          echo "TLS bootstrap completed"
+      restartPolicy: OnFailure
+  backoffLimit: 3
+---
+# ModuleConfig для csi-nfs с RPC-with-TLS (RFC 9289)
+# https://deckhouse.ru/modules/csi-nfs/stable/examples.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: csi-nfs
+spec:
+  enabled: true
+  version: 1
+  settings:
+    tlsParameters:
+      ca: ""
+---
+# NFSStorageClass для CSI-NFS с RPC-with-TLS
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: NFSStorageClass
+metadata:
+  name: nfs-csi
+spec:
+  connection:
+    host: nfs-server-service.kube-system.svc.cluster.local
+    share: /mnt/nfs-storage/exports
+    nfsVersion: "4.2"
+    tls: true
+    mtls: false
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+---
+# Service для доступа к NFS серверу
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server-service
+  namespace: kube-system
+spec:
+  type: ClusterIP
+  # ClusterIP автоматически назначается из Service Subnet
+  ports:
+  - name: nfs
+    port: 2049
+    protocol: TCP
+  - name: portmap
+    port: 111
+    protocol: TCP
+  - name: portmap-udp
+    port: 111
+    protocol: UDP
+  selector:
+    node.deckhouse.io/group: nfs-server
+---
+# Пример PersistentVolumeClaim с использованием CSI-NFS
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-data-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-csi
+  resources:
+    requests:
+      storage: 100Gi
+---
+# ModuleConfig для включения Deckhouse модулей
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  enabled: true
+  version: 1
+---
+# ModuleConfig для sds-node-configurator (LVM VG на узлах)
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: sds-node-configurator
+spec:
+  enabled: true
+  version: 1
+---
+# ModuleConfig для sds-replicated-volume (DRBD)
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: sds-replicated-volume
+spec:
+  enabled: true
+  version: 1
+---
+# ServiceAccount для авто-настройки DRBD (monitoring)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sds-monitoring-bootstrap
+  namespace: kube-system
+---
+# ClusterRole для авто-настройки DRBD (monitoring)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sds-monitoring-bootstrap
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list"]
+- apiGroups: ["storage.deckhouse.io"]
+  resources: ["blockdevices", "lvmvolumegroups", "replicatedstoragepools", "replicatedstorageclasses"]
+  verbs: ["get", "list", "create", "patch", "update"]
+---
+# ClusterRoleBinding для авто-настройки DRBD (monitoring)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sds-monitoring-bootstrap
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sds-monitoring-bootstrap
+subjects:
+- kind: ServiceAccount
+  name: sds-monitoring-bootstrap
+  namespace: kube-system
+---
+# Job для автоматического создания LVMVolumeGroup/ReplicatedStoragePool/ReplicatedStorageClass
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sds-monitoring-bootstrap
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      serviceAccountName: sds-monitoring-bootstrap
+      containers:
+      - name: bootstrap
+        image: ubuntu:24.04
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          set -e
+          # Внутри Job-контейнера нет d8 CLI, поэтому для API-вызовов используется kubectl.
+          # Это runtime-скрипт bootstrap, не пользовательская CLI-практика.
+          apt-get update
+          apt-get install -y curl jq ca-certificates
+          curl -L -o /usr/local/bin/kubectl https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
+          chmod +x /usr/local/bin/kubectl
+
+          VG_NAME="mon-data"
+          POOL_NAME="mon-repl"
+
+          nodes=$(kubectl get nodes -l node.deckhouse.io/group=monitoring -o jsonpath='{.items[*].metadata.name}')
+          if [ -z "$nodes" ]; then
+            echo "No monitoring nodes found"
+            exit 1
+          fi
+
+          lvg_names=""
+          for node in $nodes; do
+            bd=$(kubectl get bd -o json | jq -r --arg NODE "$node" '.items[] | select(.status.nodeName==$NODE and .status.consumable==true) | .metadata.name' | head -n1)
+            if [ -z "$bd" ]; then
+              echo "No consumable BlockDevice found for node: $node"
+              exit 1
+            fi
+
+            lvg_name="mon-data-on-$node"
+            lvg_names="$lvg_names $lvg_name"
+
+            {
+              printf '%s\n' "apiVersion: storage.deckhouse.io/v1alpha1" \
+                "kind: LVMVolumeGroup" \
+                "metadata:" \
+                "  name: $lvg_name" \
+                "spec:" \
+                "  type: Local" \
+                "  local:" \
+                "    nodeName: \"$node\"" \
+                "  blockDeviceSelector:" \
+                "    matchExpressions:" \
+                "      - key: kubernetes.io/metadata.name" \
+                "        operator: In" \
+                "        values:" \
+                "          - $bd" \
+                "  actualVGNameOnTheNode: \"$VG_NAME\"";
+            } | kubectl apply -f -
+          done
+
+          {
+            printf '%s\n' "apiVersion: storage.deckhouse.io/v1alpha1" \
+              "kind: ReplicatedStoragePool" \
+              "metadata:" \
+              "  name: $POOL_NAME" \
+              "spec:" \
+              "  type: LVM" \
+              "  lvmVolumeGroups:";
+            for name in $lvg_names; do
+              printf '    - name: %s\n' "$name";
+            done;
+          } | kubectl apply -f -
+
+          {
+            printf '%s\n' "apiVersion: storage.deckhouse.io/v1alpha1" \
+              "kind: ReplicatedStorageClass" \
+              "metadata:" \
+              "  name: $POOL_NAME" \
+              "spec:" \
+              "  storagePool: $POOL_NAME" \
+              "  reclaimPolicy: Delete" \
+              "  topology: Ignored";
+          } | kubectl apply -f -
+
+          echo "DRBD bootstrap completed"
+      restartPolicy: OnFailure
+  backoffLimit: 3
+---
+# PVC для данных мониторинга (DRBD)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mon-repl-pvc
+  namespace: d8-monitoring
+spec:
+  storageClassName: mon-repl
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+# StorageClass для Yandex Cloud Object Storage (S3)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: yandex-s3
+provisioner: s3.csi.aws.com
+parameters:
+  endpoint: "https://storage.yandexcloud.net"
+  bucket: "deckhouse-storage"              # Замените на имя вашего bucket
+  region: "ru-central1"
+allowVolumeExpansion: true
+---
+# Пример PersistentVolumeClaim с S3 хранилищем
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-data-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: yandex-s3
+  resources:
+    requests:
+      storage: 100Gi

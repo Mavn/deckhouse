@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: frontlb
+spec:
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/frontlb: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: frontlb
+  # Пример для узлов типа Static.
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: frontlb

@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: front
+spec:
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/front: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: front
+  # Пример для узлов типа Static.
+  nodeType: Static
+  staticInstances:
+    count: 2
+    labelSelector:
+      matchLabels:
+        role: front

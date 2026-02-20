@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: StaticInstance
+metadata:
+  name: tdh-system-01
+  labels:
+    role: system
+spec:
+  address: "192.168.142.92"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps

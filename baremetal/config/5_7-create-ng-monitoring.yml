@@ -1,0 +1,18 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: monitoring
+spec:
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/monitoring: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: monitoring
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: monitoring
