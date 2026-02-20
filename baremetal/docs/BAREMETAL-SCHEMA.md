@@ -11,17 +11,17 @@
 ```mermaid
 flowchart LR
   subgraph Platform[Deckhouse platform layer]
-    NGF[NodeGroup front\ncount=2] --> FN1[tdh-front-01]
+    NGF[NodeGroup front<br/>count=2] --> FN1[tdh-front-01]
     NGF --> FN2[tdh-front-02]
 
-    NGLB[NodeGroup frontlb\ncount=1] --> LB1[tdh-front-lb-01]
+    NGLB[NodeGroup frontlb<br/>count=1] --> LB1[tdh-front-lb-01]
 
-    IC[IngressNginxController main\nclass=nginx\nnodeSelector frontlb] --> NGLB
+    IC[IngressNginxController main<br/>class=nginx<br/>nodeSelector frontlb] --> NGLB
   end
 
   subgraph Workload[API workload layer]
     DEP[Deployment frontend] --> SVC[Service frontend]
-    SVC --> ING[Ingress frontend\nhost=frontend.local]
+    SVC --> ING[Ingress frontend<br/>host=frontend.local]
     DEP --> PDB[frontend-pdb]
     DEP --> HPA[frontend-hpa]
     DEP --> NP[frontend-networkpolicy]
